@@ -62,6 +62,9 @@ textarea{height:150px;resize:vertical;line-height:1.6}
 .submit-btn:hover{background:var(--dark)}
 .submit-btn:active{transform:scale(0.99)}
 .submit-btn:disabled{background:var(--border);color:var(--text3);cursor:not-allowed;transform:none}
+.btn-spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;border-radius:50%;animation:btn-spin 0.7s linear infinite;margin-right:9px;vertical-align:-2px}
+.submit-btn:disabled .btn-spinner{border-color:rgba(122,128,165,0.35);border-top-color:var(--text3)}
+@keyframes btn-spin{to{transform:rotate(360deg)}}
 
 /* SUCCESS */
 .success-card{display:none;background:var(--success-bg);border:1px solid var(--success-border);border-radius:16px;padding:36px 28px;text-align:center;margin-bottom:20px}
@@ -123,8 +126,10 @@ textarea{height:150px;resize:vertical;line-height:1.6}
 .footer{text-align:center;padding:20px;font-size:11px;color:var(--text3);border-top:1px solid var(--border);cursor:default;user-select:none}
 .footer .rights{margin-bottom:4px}
 .footer .by{color:var(--text3)}
-.footer .by span{color:var(--orange);font-weight:600;cursor:pointer;transition:color 0.2s}
-.footer .by span:hover{color:var(--blue)}
+.footer .by span{color:var(--orange);font-weight:600;transition:color 0.2s}
+.footer .by .credit-name{cursor:default}
+#adminTrigger{cursor:pointer;opacity:0.35;padding:0 3px;font-weight:700;color:var(--text3) !important}
+#adminTrigger:hover{opacity:1;color:var(--blue) !important}
 
 /* DARK MODE */
 [data-dark] body,[data-dark]{background:#0a0c1a;color:#e8eaf6}
@@ -277,7 +282,7 @@ textarea{height:150px;resize:vertical;line-height:1.6}
         <div class="char-count"><span id="charCount">0</span> / 1000 herufi</div>
       </div>
 
-      <button class="submit-btn" id="submitBtn" onclick="submitForm()" disabled>Wasilisha Ujumbe</button>
+      <button class="submit-btn" id="submitBtn" onclick="submitForm()" disabled>Tuma</button>
     </div>
 
     <div class="success-card" id="successCard">
@@ -294,7 +299,7 @@ textarea{height:150px;resize:vertical;line-height:1.6}
 
   <div class="footer">
     <div class="rights">All rights reserved &copy; 2026 MUSO E-Malalamiko</div>
-    <div class="by">A product by <span id="adminTrigger" onclick="showPage('admin-login')">RishedKassimu</span></div>
+    <div class="by">A product by <span class="credit-name">RishedKassimu</span><span id="adminTrigger" onclick="showPage('admin-login')">&nbsp;&middot;</span></div>
   </div>
 </div>
 
@@ -756,6 +761,17 @@ function checkForm() {
   document.getElementById('submitBtn').disabled = !(min && msg.length >= 10);
 }
 
+function setSubmitLoading(isLoading) {
+  var btn = document.getElementById('submitBtn');
+  if (isLoading) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="btn-spinner"></span>Inatuma...';
+  } else {
+    btn.disabled = false;
+    btn.textContent = 'Tuma';
+  }
+}
+
 function submitForm() {
   var now = Date.now();
   if (now - lastSubmit < 10000) {
@@ -766,9 +782,11 @@ function submitForm() {
   var type = document.getElementById('msgType').value || 'Lalamiko';
   var msg = document.getElementById('messageText').value.trim().slice(0, 1000);
   if (!min || msg.length < 10) return;
-  var btn = document.getElementById('submitBtn');
-  btn.disabled = true;
-  btn.textContent = 'Inatuma...';
+  setSubmitLoading(true);
+  var safetyTimer = setTimeout(function() {
+    setSubmitLoading(false);
+    alert('Muunganiko umechukua muda mrefu. Tafadhali angalia mtandao wako kisha jaribu tena.');
+  }, 12000);
   waitForFirebase(function() {
     lastSubmit = now;
     var fns = window._fbFns;
@@ -779,13 +797,15 @@ function submitForm() {
       status: 'Inasubiri',
       timestamp: fns.serverTimestamp()
     }).then(function(ref) {
+      clearTimeout(safetyTimer);
       document.getElementById('trackId').textContent = 'Nambari ya Kumbukumbu: MU-' + ref.id.toUpperCase().slice(0, 8);
       document.getElementById('formCard').style.display = 'none';
       document.getElementById('successCard').style.display = 'block';
+      setSubmitLoading(false);
     }).catch(function(e) {
+      clearTimeout(safetyTimer);
       console.error(e);
-      btn.disabled = false;
-      btn.textContent = 'Wasilisha Ujumbe';
+      setSubmitLoading(false);
       alert('Hitilafu: ' + e.message);
     });
   });
@@ -797,6 +817,7 @@ function resetForm() {
   document.getElementById('messageText').value = '';
   document.getElementById('charCount').textContent = '0';
   document.getElementById('submitBtn').disabled = true;
+  document.getElementById('submitBtn').textContent = 'Tuma';
   document.getElementById('formCard').style.display = 'block';
   document.getElementById('successCard').style.display = 'none';
 }
